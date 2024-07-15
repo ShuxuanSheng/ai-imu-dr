@@ -35,6 +35,8 @@ def launch(args):
 
 
 class KITTIParameters(IEKF.Parameters):
+    # 这里是类级别的属性，可以直接通过类名来访问，例如KITTIParameters.g，这有点类似于c++中static成员变量的用法
+    # __init__函数中的属性是实例级别的属性，实例化后通过实例化的对象访问
     # gravity vector
     g = np.array([0, 0, -9.80655])
 
@@ -53,18 +55,31 @@ class KITTIParameters(IEKF.Parameters):
     cov_lat = 1
     cov_up = 10
 
+    # **kwargs接收任意数量的关键字参数，其中** 表示参数是以字典的形式传递的
     def __init__(self, **kwargs):
         super(KITTIParameters, self).__init__(**kwargs)
         self.set_param_attr()
 
+    # set_param_attr函数的作用是当将类级别的属性绑定到每一个实例上，
+    # 这么做的作用是可以为每一个不同的实例设置不同的属性值，而不是让所有实例共享同一个类级别的属性值
+    # 同时，自动设置类级别属性到实例，可以避免在每个实例化对象时重复设置这些属性
+    # 同时，将模型的超参数或配置选项直接传递给模型实例，而无需显式地在每个实例化过程中手动设置这些参数。
     def set_param_attr(self):
+        # 获取 KITTIParameters 类的所有属性名（不包括特殊方法和属性）
+        # dir(KITTIParameters) 返回 KITTIParameters 类的所有属性和方法名的列表
+        # 列表推导式用于从一个可迭代对象中创建新的列表，语法是[expression for item in iterable if condition]
         attr_list = [a for a in dir(KITTIParameters) if
                      not a.startswith('__') and not callable(getattr(KITTIParameters, a))]
+        # 把
         for attr in attr_list:
             setattr(self, attr, getattr(KITTIParameters, attr))
 
 
 class KITTIDataset(BaseDataset):
+    # OxtsData是Kitti数据集中的一部分，它提供了GPS/惯性导航系统的数据
+    # 定一个命名元组类型数据，
+    # 语法上，namedtuple接收两个参数：typename(这里是OxtsPacket)、一个可迭代对象例如列表
+    # 这样可以通过OxtsPacket.lat这种方式更方便的访问数据
     OxtsPacket = namedtuple('OxtsPacket',
                             'lat, lon, alt, ' + 'roll, pitch, yaw, ' + 'vn, ve, vf, vl, vu, '
                                                                        '' + 'ax, ay, az, af, al, '
@@ -116,6 +131,7 @@ class KITTIDataset(BaseDataset):
     odometry_benchmark_img["2011_09_30_drive_0034_extract"] = [0, 12000]
 
     def __init__(self, args):
+        #super方法保证在执行构造函数之前先执行父类BaseDataset的构造函数
         super(KITTIDataset, self).__init__(args)
 
         self.datasets_validatation_filter['2011_09_30_drive_0028_extract'] = [11231, 53650]
@@ -134,7 +150,10 @@ class KITTIDataset(BaseDataset):
             if dataset_fake in self.datasets_train:
                 self.datasets_train.remove(dataset_fake)
 
-    @staticmethod
+    """
+        读取KITTI数据集中的oxts数据(gnss/imu组合定位数据)，进行数据类型转换，最后经过pickle序列化后保存成.p文件
+    """
+    @staticmethod   #@staticmethod显式声明静态方法，类似于c++中的static
     def read_data(args):
         """
         Read the data from the KITTI dataset
@@ -145,7 +164,9 @@ class KITTIDataset(BaseDataset):
 
         print("Start read_data")
         t_tot = 0  # sum of times for the all dataset
+        # 通过os.listdir函数获取指定目录中所有文件和子目录的名称列表
         date_dirs = os.listdir(args.path_data_base)
+        # enumerate将列表中的每个元素和它的索引组合成一个元组
         for n_iter, date_dir in enumerate(date_dirs):
             # get access to each sequence
             path1 = os.path.join(args.path_data_base, date_dir)
@@ -158,6 +179,7 @@ class KITTIDataset(BaseDataset):
                 if not os.path.isdir(path2):
                     continue
                 # read data
+                # 获取指定目录 path2/oxts/data 下所有的 .txt 文件，并将它们按照文件名排序存储在 oxts_files 列表中
                 oxts_files = sorted(glob.glob(os.path.join(path2, 'oxts', 'data', '*.txt')))
                 oxts = KITTIDataset.load_oxts_packets_and_poses(oxts_files)
 
@@ -169,9 +191,9 @@ class KITTIDataset(BaseDataset):
                 """
 
                 print("\n Sequence name : " + date_dir2)
-                if len(oxts) < KITTIDataset.min_seq_dim:  #  sequence shorter than 30 s are rejected
-                    cprint("Dataset is too short ({:.2f} s)".format(len(oxts) / 100), 'yellow')
-                    continue
+                # if len(oxts) < KITTIDataset.min_seq_dim:  #  sequence shorter than 30 s are rejected
+                #     cprint("Dataset is too short ({:.2f} s)".format(len(oxts) / 100), 'yellow')
+                #     continue
                 lat_oxts = np.zeros(len(oxts))
                 lon_oxts = np.zeros(len(oxts))
                 alt_oxts = np.zeros(len(oxts))
@@ -195,7 +217,7 @@ class KITTIDataset(BaseDataset):
                     oxts_k = oxts[k]
                     t[k] = 3600 * t[k].hour + 60 * t[k].minute + t[k].second + t[
                         k].microsecond / 1e6
-                    lat_oxts[k] = oxts_k[0].lat
+                    lat_oxts[k] = oxts_k[0].lat #oxts_k数据类型是OxtsData(namedtuple)，其中第一个字段是oxts_packets
                     lon_oxts[k] = oxts_k[0].lon
                     alt_oxts[k] = oxts_k[0].alt
                     acc[k, 0] = oxts_k[0].af
@@ -235,7 +257,7 @@ class KITTIDataset(BaseDataset):
 
                 p_oxts = lla2ned(lat_oxts, lon_oxts, alt_oxts, lat_oxts[0], lon_oxts[0],
                                  alt_oxts[0], latlon_unit='deg', alt_unit='m', model='wgs84')
-                p_oxts[:, [0, 1]] = p_oxts[:, [1, 0]]  # see note
+                p_oxts[:, [0, 1]] = p_oxts[:, [1, 0]]  # see note，oxts数据和gt东向、北向是反的
 
                 # take correct imu measurements
                 u = np.concatenate((gyro_bis, acc_bis), -1)
@@ -298,6 +320,9 @@ class KITTIDataset(BaseDataset):
             pass
         return files
 
+    """
+        返回绕 x 轴旋转角度 t 的旋转矩阵
+    """
     @staticmethod
     def rotx(t):
         """Rotation about the x-axis."""
@@ -354,6 +379,7 @@ class KITTIDataset(BaseDataset):
            whose origin is the first GPS position.
         """
         # Scale for Mercator projection (from first lat value)
+        # 墨卡托投影的比例（从第一个纬度值开始）
         scale = None
         # Origin of the global coordinate system (first GPS position)
         origin = None
@@ -365,10 +391,11 @@ class KITTIDataset(BaseDataset):
                 for line in f.readlines():
                     line = line.split()
                     # Last five entries are flags and counts
-                    line[:-5] = [float(x) for x in line[:-5]]
-                    line[-5:] = [int(float(x)) for x in line[-5:]]
+                    # 后列数据分别是navstat、numsats、posmode、velmode、orimode
+                    line[:-5] = [float(x) for x in line[:-5]] #选择除了最后五个元素外的所有元素，并将它们转换为浮点数类型。
+                    line[-5:] = [int(float(x)) for x in line[-5:]] #选择最后五个元素外的所有元素，并将它们转换为整数类型。
 
-                    packet = KITTIDataset.OxtsPacket(*line)
+                    packet = KITTIDataset.OxtsPacket(*line) #OxtsPacket是namedtuple类型，这里是将每一行转换成OxtsPacket这种数据格式
 
                     if scale is None:
                         scale = np.cos(packet.lat * np.pi / 180.)
@@ -455,7 +482,8 @@ def test_filter(args, dataset):
 
 
 class KITTIArgs():
-        path_data_base = "/media/mines/46230797-4d43-4860-9b76-ce35e699ea47/KITTI/raw"
+        # path_data_base = "/media/mines/46230797-4d43-4860-9b76-ce35e699ea47/KITTI/raw"
+        path_data_base = "/home/ssx/shengshuxuan/datasets/kitti/2011_09_26_drive_0002_extract/"
         path_data_save = "../data"
         path_results = "../results"
         path_temp = "../temp"
@@ -464,15 +492,16 @@ class KITTIArgs():
         seq_dim = 6000
 
         # training, cross-validation and test dataset
+        # 指定训练集、交叉验证集、测试集
         cross_validation_sequences = ['2011_09_30_drive_0028_extract']
         test_sequences = ['2011_09_30_drive_0028_extract']
-        continue_training = True
+        continue_training = False
 
         # choose what to do
-        read_data = 0
+        read_data = 1
         train_filter = 0
-        test_filter = 1
-        results_filter = 1
+        test_filter = 0
+        results_filter = 0
         dataset_class = KITTIDataset
         parameter_class = KITTIParameters
 

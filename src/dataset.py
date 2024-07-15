@@ -8,6 +8,9 @@ import os
 from collections import OrderedDict
 
 
+"""
+    继承自torch的class Dataset
+"""
 class BaseDataset(Dataset):
     pickle_extension = ".p"
     """extension of the file saved in pickle format"""
@@ -53,6 +56,9 @@ class BaseDataset(Dataset):
         self.get_datasets()
         self.set_normalize_factors()
 
+    # __表示魔术方法，使用索引操作符 [] 来访问对象时obj[i]，解释器判断是否定义了__getitem__
+    # 如果定义了，自动调用 __getitem__ 方法来处理这个操作
+    # 类似于c++中的重载
     def __getitem__(self, i):
         mondict = self.load(self.path_data_save, self.datasets[i])
         return mondict
@@ -139,7 +145,8 @@ class BaseDataset(Dataset):
     def read_data(args):
         raise NotImplementedError
 
-    @classmethod
+    @classmethod  #classmethod声明能够在方法内部访问类的属性和调用类的其他方法，而不需要具体的类实例
+    # cls指向类本身，类似于指向实例本身的self
     def load(cls, *_file_name):
         file_name = os.path.join(*_file_name)
         if not file_name.endswith(cls.pickle_extension):
@@ -154,7 +161,7 @@ class BaseDataset(Dataset):
         if not file_name.endswith(cls.pickle_extension):
             file_name += cls.pickle_extension
         with open(file_name, "wb") as file_pi:
-            pickle.dump(mondict, file_pi)
+            pickle.dump(mondict, file_pi) #使用 pickle module将 mondict 序列化后写入文件 file_pi
 
     def init_state_torch_filter(self, iekf):
         b_omega0 = torch.zeros(3).double()

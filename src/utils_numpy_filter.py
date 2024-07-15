@@ -97,6 +97,9 @@ class NUMPYIEKF:
             self.set(**kwargs)
 
         def set(self, **kwargs):
+            # kwargs是一个字典，遍历这个字典
+            # items() 是字典类型（dict）的内置方法，返回一个可迭代对象
+            # 遍历可迭代对象，使用内置函数setattr设置对象属性
             for key, value in kwargs.items():
                 setattr(self, key, value)
 
