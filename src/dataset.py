@@ -67,8 +67,9 @@ class BaseDataset(Dataset):
         return len(self.datasets)
 
     def get_datasets(self):
+        # 如果os.listdir(self.path_data_save)是空的，for循环不执行
         for dataset in os.listdir(self.path_data_save):
-            self.datasets += [dataset[:-2]]  # take just name, remove the ".p"
+            self.datasets += [dataset[:-2]]  # 读取已经转换成.p格式的kitti数据   take just name, remove the ".p"
         self.divide_datasets()
 
     def divide_datasets(self):
@@ -80,20 +81,35 @@ class BaseDataset(Dataset):
         return self.datasets[i]
 
     def get_data(self, i):
+        # 根据索引 index 从 self 对象(保存了kitti数据)中获取相应的 pickle_dict，这里[]被重载了
+        # datasets是存放所有数据名称的list，入参是数据的名称，例如2011_09_30_drive_0018_extract，datasets.index(例如2011_09_30_drive_0018_extract)返回list中第一次出现例如2011_09_30_drive_0018_extract对应的索引
         pickle_dict = self[self.datasets.index(i) if type(i) != int else i]
+        # pickle_dict是字典类型，
+        # ang_gt等是二维张量，例如'ang_gt': tensor([[0.0262, 0.0231, 1.7352],
+        #         [0.0263, 0.0230, 1.7354],
+        #         [0.0264, 0.0229, 1.7357],
+        #         ...,
+        #         [0.0054, 0.0117, 1.7017],
+        #         [0.0053, 0.0118, 1.7019],
+        #         [0.0052, 0.0119, 1.7020]])
         return pickle_dict['t'], pickle_dict['ang_gt'], pickle_dict['p_gt'], pickle_dict['v_gt'],\
                pickle_dict['u']
 
+    """
+        求train_data中u的mean和std用于normalization
+        在数据预处理阶段，特征归一化（Normalization）是一种常见的操作，目的是将不同特征的取值范围统一或者缩放到相似的尺度
+    """
     def set_normalize_factors(self):
         path_normalize_factor = os.path.join(self.path_temp, self.file_normalize_factor)
         # we set factors only if file does not exist
+        # 如果之前已经计算并保存过normalize_factor，直接load后return
         if os.path.isfile(path_normalize_factor):
             pickle_dict = self.load(path_normalize_factor)
             self.normalize_factors = pickle_dict['normalize_factors']
             self.num_data = pickle_dict['num_data']
             return
 
-        # first compute mean
+        # firstly， compute mean
         self.num_data = 0
 
         for i, dataset in enumerate(self.datasets_train):
@@ -104,9 +120,10 @@ class BaseDataset(Dataset):
             else:
                 u_loc += u.sum(dim=0)
             self.num_data += u.shape[0]
+        #这里的u_loc虽然定义在for循环内部，但是与c++不同，python语法中，如果for循环外没有重新定义，因此它的作用域延伸到了整个 set_normalize_factors 方法
         u_loc = u_loc / self.num_data
 
-        # second compute standard deviation
+        # secondly, compute standard deviation
         for i, dataset in enumerate(self.datasets_train):
             pickle_dict = self.load(self.path_data_save, dataset)
             u = pickle_dict['u']

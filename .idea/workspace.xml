@@ -9,13 +9,14 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="423d8db3-8c37-4ad0-9913-4822d3d9166f" name="Default Changelist" comment="Default Changelist">
-      <change beforePath="$PROJECT_DIR$/.idea/ai-imu-dr.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/ai-imu-dr.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="423d8db3-8c37-4ad0-9913-4822d3d9166f" name="Default Changelist" comment="1# 增加注释：从kitti原始集读取gnss/imu数据，进行格式转换并序列化后保存成.p文件">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main_kitti.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main_kitti.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/train_torch_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/train_torch_filter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils_numpy_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils_numpy_filter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils_torch_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils_torch_filter.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -91,6 +92,7 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="SET_USER_NAME_GLOBALLY" value="false" />
   </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
@@ -174,23 +176,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.main_kitti.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.cidr.known.project.marker": "true",
-    "RunOnceActivity.readMode.enableVisualFormatting": "true",
-    "cf.first.check.clang-format": "false",
-    "cidr.known.project.marker": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.main_kitti.executor&quot;: &quot;Debug&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="main_kitti" type="PythonConfigurationType" factoryName="Python" singleton="false" temporary="true">
       <module name="ai-imu-dr" />
@@ -234,8 +236,21 @@
       <updated>1555341094920</updated>
       <workItem from="1555341096254" duration="1531000" />
       <workItem from="1721011046895" duration="17452000" />
-      <workItem from="1721044029880" duration="3351000" />
+      <workItem from="1721044029880" duration="6408000" />
+      <workItem from="1721093665658" duration="15502000" />
+      <workItem from="1721118666347" duration="2881000" />
+      <workItem from="1721130622232" duration="3820000" />
+      <workItem from="1721183068241" duration="19297000" />
     </task>
+    <task id="LOCAL-00001" summary="1# 增加注释：从kitti原始集读取gnss/imu数据，进行格式转换并序列化后保存成.p文件">
+      <option name="closed" value="true" />
+      <created>1721047845997</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1721047845997</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
@@ -270,21 +285,9 @@
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/utils_plot.py</url>
-          <line>205</line>
-          <option name="timeStamp" value="5" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/utils_plot.py</url>
-          <line>22</line>
-          <option name="timeStamp" value="7" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="1# 增加注释：从kitti原始集读取gnss/imu数据，进行格式转换并序列化后保存成.p文件" />
+    <option name="LAST_COMMIT_MESSAGE" value="1# 增加注释：从kitti原始集读取gnss/imu数据，进行格式转换并序列化后保存成.p文件" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/ai_imu_dr$main_kitti.coverage" NAME="main_kitti Coverage Results" MODIFIED="1555342494523" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />

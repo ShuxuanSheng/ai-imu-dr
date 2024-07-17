@@ -21,7 +21,9 @@ from utils_plot import results_filter
 
 def launch(args):
     if args.read_data:
-        args.dataset_class.read_data(args)
+        args.dataset_class.read_data(args) # 读取原始kitti数据保存成.p文件
+    # dataset是实例化的KITTIDataset类型的对象，属性datasets中加载了.p文件的名字 print(dataset.datasets) -> ['2011_09_26_drive_0002_extract']
+    # 这里不直接写成 dataset = KITTIDataset(args)是为了保持代码的灵活，可以通过修改dataset_class的值来切换不同的数据集
     dataset = args.dataset_class(args)
 
     if args.train_filter:
@@ -81,18 +83,19 @@ class KITTIDataset(BaseDataset):
     # 语法上，namedtuple接收两个参数：typename(这里是OxtsPacket)、一个可迭代对象例如列表
     # 这样可以通过OxtsPacket.lat这种方式更方便的访问数据
     OxtsPacket = namedtuple('OxtsPacket',
-                            'lat, lon, alt, ' + 'roll, pitch, yaw, ' + 'vn, ve, vf, vl, vu, '
-                                                                       '' + 'ax, ay, az, af, al, '
-                                                                            'au, ' + 'wx, wy, wz, '
-                                                                                     'wf, wl, wu, '
-                                                                                     '' +
-                            'pos_accuracy, vel_accuracy, ' + 'navstat, numsats, ' + 'posmode, '
-                                                                                  'velmode, '
-                                                                                  'orimode')
+                            'lat, lon, alt, '
+                            + 'roll, pitch, yaw, '
+                            + 'vn, ve, vf, vl, vu, '
+                            + 'ax, ay, az, af, al, au, '
+                            + 'wx, wy, wz, wf, wl, wu, '
+                            + 'pos_accuracy, vel_accuracy, '
+                            + 'navstat, numsats, '
+                            + 'posmode, velmode, orimode')
 
     # Bundle into an easy-to-access structure
     OxtsData = namedtuple('OxtsData', 'packet, T_w_imu')
     min_seq_dim = 25 * 100  # 60 s
+    # 有问题的数据，后续需要从数据集中移除
     datasets_fake = ['2011_09_26_drive_0093_extract', '2011_09_28_drive_0039_extract',
                      '2011_09_28_drive_0002_extract']
     """
@@ -135,14 +138,14 @@ class KITTIDataset(BaseDataset):
         super(KITTIDataset, self).__init__(args)
 
         self.datasets_validatation_filter['2011_09_30_drive_0028_extract'] = [11231, 53650]
-        self.datasets_train_filter["2011_10_03_drive_0042_extract"] = [0, None]
+        # self.datasets_train_filter["2011_10_03_drive_0042_extract"] = [0, None]
         self.datasets_train_filter["2011_09_30_drive_0018_extract"] = [0, 15000]
-        self.datasets_train_filter["2011_09_30_drive_0020_extract"] = [0, None]
-        self.datasets_train_filter["2011_09_30_drive_0027_extract"] = [0, None]
-        self.datasets_train_filter["2011_09_30_drive_0033_extract"] = [0, None]
+        # self.datasets_train_filter["2011_09_30_drive_0020_extract"] = [0, None]
+        # self.datasets_train_filter["2011_09_30_drive_0027_extract"] = [0, None]
+        # self.datasets_train_filter["2011_09_30_drive_0033_extract"] = [0, None]
         self.datasets_train_filter["2011_10_03_drive_0027_extract"] = [0, 18000]
         self.datasets_train_filter["2011_10_03_drive_0034_extract"] = [0, 31000]
-        self.datasets_train_filter["2011_09_30_drive_0034_extract"] = [0, None]
+        # self.datasets_train_filter["2011_09_30_drive_0034_extract"] = [0, None]
 
         for dataset_fake in KITTIDataset.datasets_fake:
             if dataset_fake in self.datasets:
@@ -441,6 +444,11 @@ class KITTIDataset(BaseDataset):
                 timestamps.append(t)
         return timestamps
 
+# class BITDataset(BaseDataset):
+#     """
+#         BIT compus dataset using EV200
+#     """
+#     BitData = namedtuple('BitData', 'packet, T_w_imu')
 
 def test_filter(args, dataset):
     iekf = IEKF()
@@ -453,7 +461,7 @@ def test_filter(args, dataset):
     torch_iekf.set_param_attr()
 
     torch_iekf.load(args, dataset)
-    iekf.set_learned_covariance(torch_iekf)
+    iekf.set_learned_covariance(torch_iekf)  #论文中提到滤波器在线估计的时候Q是固定的，但是Q的值是神经网络学出来的
 
     for i in range(0, len(dataset.datasets)):
         dataset_name = dataset.dataset_name(i)
@@ -464,6 +472,7 @@ def test_filter(args, dataset):
                                                        to_numpy=True)
         N = None
         u_t = torch.from_numpy(u).double()
+        # acc和gyr输入到torch_iekf网络中，预测
         measurements_covs = torch_iekf.forward_nets(u_t)
         measurements_covs = measurements_covs.detach().numpy()
         start_time = time.time()
@@ -495,13 +504,13 @@ class KITTIArgs():
         # 指定训练集、交叉验证集、测试集
         cross_validation_sequences = ['2011_09_30_drive_0028_extract']
         test_sequences = ['2011_09_30_drive_0028_extract']
-        continue_training = False
+        continue_training = True
 
         # choose what to do
-        read_data = 1
+        read_data = 0
         train_filter = 0
-        test_filter = 0
-        results_filter = 0
+        test_filter = 1
+        results_filter = 1
         dataset_class = KITTIDataset
         parameter_class = KITTIParameters
 

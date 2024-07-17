@@ -4,8 +4,12 @@ import torch
 import matplotlib.pyplot as plt
 
 
+"""
+    拿到kitti数据，并要测试的数据切片出来、转换成numpy数组(可选)
+"""
 def prepare_data(args, dataset, dataset_name, i, idx_start=None, idx_end=None, to_numpy=False):
     # get data
+    # 拿到kitti的数据
     t, ang_gt, p_gt, v_gt, u = dataset.get_data(dataset_name)
 
     # get start instant
@@ -13,7 +17,7 @@ def prepare_data(args, dataset, dataset_name, i, idx_start=None, idx_end=None, t
         idx_start = 0
     # get end instant
     if idx_end is None:
-        idx_end = t.shape[0]
+        idx_end = t.shape[0] #shape[0]返回维度大小，即整个长度
 
     t = t[idx_start: idx_end]
     u = u[idx_start: idx_end]

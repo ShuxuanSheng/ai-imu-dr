@@ -11,10 +11,13 @@ class InitProcessCovNet(torch.nn.Module):
 
         def __init__(self):
             super(InitProcessCovNet, self).__init__()
-
+            # 定义了模型的两个参数 beta_process 和 beta_initialization，它们被初始化为值为3的双精度张量 (tensor)
             self.beta_process = 3*torch.ones(2).double()
             self.beta_initialization = 3*torch.ones(2).double()
 
+            # 创建了两个线性层 (Linear)，
+            # 输入维度为1 输出维度为6 bias=False 表示不使用偏置项 .double() 表示使用双精度浮点数进行计算
+            # 对权重矩阵的所有元素都除以10，这是对权重进行初始化的一种方式，通常有助于加快模型的收敛速度或者改进模型的性能。
             self.factor_initial_covariance = torch.nn.Linear(1, 6, bias=False).double()
             """parameters for initializing covariance"""
             self.factor_initial_covariance.weight.data[:] /= 10
@@ -22,13 +25,18 @@ class InitProcessCovNet(torch.nn.Module):
             self.factor_process_covariance = torch.nn.Linear(1, 6, bias=False).double()
             """parameters for process noise covariance"""
             self.factor_process_covariance.weight.data[:] /= 10
+            # 创建激活函数Tanh
             self.tanh = torch.nn.Tanh()
 
         def forward(self, iekf):
             return
 
         def init_cov(self, iekf):
+            # 调用定义的线性层，对一个值为1的双精度浮点数张量进行处理。
+            # .squeeze() 方法用于去除张量中的所有尺寸为1的维度，将结果转换为标量（scalar）。因此，alpha 是一个标量，表示经过线性层处理后的结果。
             alpha = self.factor_initial_covariance(torch.ones(1).double()).squeeze()
+            # 双曲正切函数激活函数tanh返回一个在[-1, 1]范围内的值
+            # 取10的指数
             beta = 10**(self.tanh(alpha))
             return beta
 
@@ -43,7 +51,7 @@ class MesNet(torch.nn.Module):
             super(MesNet, self).__init__()
             self.beta_measurement = 3*torch.ones(2).double()
             self.tanh = torch.nn.Tanh()
-
+            # 构建序列化的卷积神经网络，包括巻积层、池化层、激活函数、Dropout 层和全连接层
             self.cov_net = torch.nn.Sequential(torch.nn.Conv1d(6, 32, 5),
                        torch.nn.ReplicationPad1d(4),
                        torch.nn.ReLU(),
@@ -57,6 +65,7 @@ class MesNet(torch.nn.Module):
             self.cov_lin = torch.nn.Sequential(torch.nn.Linear(32, 2),
                                               torch.nn.Tanh(),
                                               ).double()
+            # 偏置项和权重矩阵的元素都除以100，是一种常见的初始化策略，用于控制参数的初始范围，有助于模型的训练和收敛
             self.cov_lin[0].bias.data[:] /= 100
             self.cov_lin[0].weight.data[:] /= 100
 
@@ -82,8 +91,8 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         # mean and standard deviation of parameters for normalizing inputs
         self.u_loc = None
         self.u_std = None
-        self.initprocesscov_net = InitProcessCovNet()
-        self.mes_net = MesNet()
+        self.initprocesscov_net = InitProcessCovNet() #初始cov网络
+        self.mes_net = MesNet()  #量测网络
         self.cov0_measurement = None
 
         # modified parameters
@@ -236,7 +245,8 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
     @staticmethod
     def state_and_cov_update(Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, H, r, R):
         S = H.mm(P).mm(H.t()) + R
-        Kt, _ = torch.gesv(P.mm(H.t()).t(), S)
+        # Kt, _ = torch.gesv(P.mm(H.t()).t(), S)  #新版的pytorch中移除了gesv方法
+        Kt = torch.linalg.solve(S,P.mm(H.t()).t())
         K = Kt.t()
         dx = K.mv(r.view(-1))
 
@@ -421,8 +431,10 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         return U.mm(S).mm(V.t())
 
     def forward_nets(self, u):
+        # 对u进行归一化、转置并在第 0 维度（即最前面）添加一个维度
         u_n = self.normalize_u(u).t().unsqueeze(0)
         u_n = u_n[:, :6]
+        #这里调用mes_net网络，相当于默认执行mes_net中forwad方法，相当于重载了()
         measurements_covs = self.mes_net(u_n, self)
         return measurements_covs
 

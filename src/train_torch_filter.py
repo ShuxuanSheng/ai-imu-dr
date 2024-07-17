@@ -11,7 +11,7 @@ import copy
 max_loss = 2e1
 max_grad_norm = 1e0
 min_lr = 1e-5
-criterion = torch.nn.MSELoss(reduction="sum")
+criterion = torch.nn.MSELoss(reduction="sum")  #使用 PyTorch 中的均方误差损失函数（MSELoss）来计算两个张量之间的均方误差损失
 lr_initprocesscov_net = 1e-4
 weight_decay_initprocesscov_net = 0e-8
 lr_mesnet = {'cov_net': 1e-4,
@@ -26,12 +26,12 @@ def compute_delta_p(Rot, p):
     list_rpe = [[], [], []]  # [idx_0, idx_end, pose_delta_p]
 
     # sample at 1 Hz
-    Rot = Rot[::10]
+    Rot = Rot[::10] # 每隔10个元素取一个
     p = p[::10]
 
     step_size = 10  # every second
     distances = np.zeros(p.shape[0])
-    dp = p[1:] - p[:-1]  #  this must be ground truth
+    dp = p[1:] - p[:-1]  #  this must be ground truth  p[1:]是从2个元素到最后一个元素、p[:-1]是第1个元素到倒数第二个元素，二者作差即dp[i] = p[i+1] - p[i]
     distances[1:] = dp.norm(dim=1).cumsum(0).numpy()
 
     seq_lengths = [100, 200, 300, 400, 500, 600, 700, 800]
@@ -82,33 +82,36 @@ def prepare_filter(args, dataset):
     # load model
     if args.continue_training:
         iekf.load(args, dataset)
-    iekf.train()
+    iekf.train()  #设置成train模式
     # init u_loc and u_std
     iekf.get_normalize_u(dataset)
     return iekf
 
 
+"""
+    根据数据集中的gt值，计算指定帧间的delta_p
+"""
 def prepare_loss_data(args, dataset):
-
-
-
     file_delta_p = os.path.join(args.path_temp, 'delta_p.p')
     if os.path.isfile(file_delta_p):
         mondict = dataset.load(file_delta_p)
         dataset.list_rpe = mondict['list_rpe']
         dataset.list_rpe_validation = mondict['list_rpe_validation']
-        if set(dataset.datasets_train_filter.keys()) <= set(dataset.list_rpe.keys()): 
+        if set(dataset.datasets_train_filter.keys()) <= set(dataset.list_rpe.keys()):
             return
 
     # prepare delta_p_gt
+    # 这里的rpe应该 相对位置误差
     list_rpe = {}
+    # self.datasets_train_filter["2011_09_30_drive_0018_extract"] = [0, 15000]
     for dataset_name, Ns in dataset.datasets_train_filter.items():
         t, ang_gt, p_gt, v_gt, u = prepare_data(args, dataset, dataset_name, 0)
         p_gt = p_gt.double()
-        Rot_gt = torch.zeros(Ns[1], 3, 3)
+        Rot_gt = torch.zeros(Ns[1], 3, 3) #如果NS = [0, None]，Ns[1]=None，这里会报错
         for k in range(Ns[1]):
             ang_k = ang_gt[k]
             Rot_gt[k] = TORCHIEKF.from_rpy(ang_k[0], ang_k[1], ang_k[2]).double()
+        # 帧间delta_p
         list_rpe[dataset_name] = compute_delta_p(Rot_gt[:Ns[1]], p_gt[:Ns[1]])
 
     list_rpe_validation = {}
@@ -144,6 +147,7 @@ def prepare_loss_data(args, dataset):
         'list_rpe': list_rpe, 'list_rpe_validation': list_rpe_validation,
         }
     dataset.dump(mondict, file_delta_p)
+    print("dataset.dump" + file_delta_p)
 
 
 def train_loop(args, dataset, epoch, iekf, optimizer, seq_dim):
@@ -157,25 +161,25 @@ def train_loop(args, dataset, epoch, iekf, optimizer, seq_dim):
                                dataset.list_rpe[dataset_name], t, ang_gt, p_gt, v_gt, u, N0)
 
         if loss is -1 or torch.isnan(loss):
-            cprint("{} loss is invalid".format(i), 'yellow')
+            cprint("dataset {} loss is invalid".format(i), 'yellow')
             continue
         elif loss > max_loss:
-            cprint("{} loss is too high {:.5f}".format(i, loss), 'yellow')
+            cprint("dataset {} loss is too high {:.5f}".format(i, loss), 'yellow')
             continue
         else:
             loss_train += loss
-            cprint("{} loss: {:.5f}".format(i, loss))
+            cprint("dataset {} loss: {:.5f}".format(i, loss))
 
     if loss_train == 0: 
         return 
-    loss_train.backward()  # loss_train.cuda().backward()  
-    g_norm = torch.nn.utils.clip_grad_norm_(iekf.parameters(), max_grad_norm)
+    loss_train.backward()  # loss_train.cuda().backward()   执行反向传播过程，计算损失函数关于模型参数的梯度
+    g_norm = torch.nn.utils.clip_grad_norm_(iekf.parameters(), max_grad_norm) #对模型 iekf 的梯度进行裁剪，限制梯度的最大范数，以防止梯度爆炸的问题
     if np.isnan(g_norm) or g_norm > 3*max_grad_norm:
         cprint("gradient norm: {:.5f}".format(g_norm), 'yellow')
         optimizer.zero_grad()
 
     else:
-        optimizer.step()
+        optimizer.step()  #调用 optimizer.step() 来更新模型参数，并将优化器的梯度清零
         optimizer.zero_grad()
         cprint("gradient norm: {:.5f}".format(g_norm))
     print('Train Epoch: {:2d} \tLoss: {:.5f}'.format(epoch, loss_train))
@@ -184,16 +188,18 @@ def train_loop(args, dataset, epoch, iekf, optimizer, seq_dim):
 
 def save_iekf(args, iekf):
     file_name = os.path.join(args.path_temp, "iekfnets.p")
+    # 大多数内置的神经网络模型（如 torch.nn.Module 的子类）以及用户自定义的模型都会默认实现 state_dict() 方法
+    # 这个方法会返回模型中所有可学习参数的状态字典
     torch.save(iekf.state_dict(), file_name)
     print("The IEKF nets are saved in the file " + file_name)
 
 
 def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt, u, N0):
     iekf.set_Q()
-    measurements_covs = iekf.forward_nets(u)
+    measurements_covs = iekf.forward_nets(u) #将imu测量输入到神经网络torchiekf中，预测measurements_covs
     Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u,measurements_covs,
                                                             v_gt, p_gt, t.shape[0],
-                                                            ang_gt[0])
+                                                            ang_gt[0]) #根据预测的预测measurements_covs执行滤波
     delta_p, delta_p_gt = precompute_lost(Rot, p, list_rpe, N0)
     if delta_p is None:
         return -1
@@ -201,6 +207,9 @@ def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt
     return loss
 
 
+"""
+    根据给定的学习率和权重衰减参数，为 iekf 对象中的多个神经网络模块创建一个 Adam 优化器
+"""
 def set_optimizer(iekf):
     param_list = [{'params': iekf.initprocesscov_net.parameters(),
                            'lr': lr_initprocesscov_net,

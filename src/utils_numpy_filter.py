@@ -122,18 +122,21 @@ class NUMPYIEKF:
         dt = t[1:] - t[:-1]  # (s)
         if N is None:
             N = u.shape[0]
+        # 第一帧初始化
         Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P = self.init_run(dt, u, p_mes, v_mes,
                                        ang0, N)
 
         for i in range(1, N):
+            # 执行propagate
             Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
                 self.propagate(Rot[i-1], v[i-1], p[i-1], b_omega[i-1], b_acc[i-1], Rot_c_i[i-1],
                                t_c_i[i-1], P, u[i], dt[i-1])
-
+            # 执行propagate
             Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
                 self.update(Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P, u[i],
                             i, measurements_covs[i])
             # correct numerical error every second
+            # 对旋转矩阵进行规范化处理，保证数值稳定性
             if i % self.n_normalize_rot == 0:
                 Rot[i] = self.normalize_rot(Rot[i])
             # correct numerical error every 10 seconds
@@ -142,9 +145,9 @@ class NUMPYIEKF:
         return Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i
 
     def init_run(self, dt, u, p_mes, v_mes, ang0, N):
-        Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = self.init_saved_state(dt, N, ang0)
-        Rot[0] = self.from_rpy(ang0[0], ang0[1], ang0[2])
-        v[0] = v_mes[0]
+        Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = self.init_saved_state(dt, N, ang0) #初始时是0和单位阵
+        Rot[0] = self.from_rpy(ang0[0], ang0[1], ang0[2]) #初始化姿态用第一帧的姿态
+        v[0] = v_mes[0] #初始化姿态用第一帧的速度
         P = self.init_covariance()
         return Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P
 
@@ -169,6 +172,9 @@ class NUMPYIEKF:
         Rot_c_i[0] = np.eye(3)
         return Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i
 
+    """
+        根据机械编排执行propagate
+    """
     def propagate(self, Rot_prev, v_prev, p_prev, b_omega_prev, b_acc_prev, Rot_c_i_prev,
                   t_c_i_prev, P_prev, u, dt):
         acc = Rot_prev.dot(u[3:6] - b_acc_prev) + self.g
@@ -213,6 +219,9 @@ class NUMPYIEKF:
         P = Phi.dot(P_prev + G.dot(self.Q).dot(G.T)).dot(Phi.T)
         return P
 
+    """
+        使用横向、高程的虚拟零速观测进行update
+    """
     def update(self, Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, u, i, measurement_cov):
         # orientation of body frame
         Rot_body = Rot.dot(Rot_c_i)
@@ -234,7 +243,7 @@ class NUMPYIEKF:
         H[:, 9:12] = H_t_c_i[1:]
         H[:, 18:21] = -Omega[1:]
         r = - v_body[1:]
-        R = np.diag(measurement_cov)
+        R = np.diag(measurement_cov)  #measurement_cov是神经网络学出来的
         Rot_up, v_up, p_up, b_omega_up, b_acc_up, Rot_c_i_up, t_c_i_up, P_up = \
             self.state_and_cov_update(Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, H, r, R)
         return Rot_up, v_up, p_up, b_omega_up, b_acc_up, Rot_c_i_up, t_c_i_up, P_up
