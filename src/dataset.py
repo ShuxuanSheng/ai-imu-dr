@@ -42,7 +42,7 @@ class BaseDataset(Dataset):
         self.datasets_train_filter = OrderedDict()
         """Validation dataset with index for starting/ending"""
 
-        # noise added to the data
+        # noise added to the data for data argument
         self.sigma_gyro = 1.e-4
         self.sigma_acc = 1.e-4
         self.sigma_b_gyro = 1.e-5
@@ -189,8 +189,7 @@ class BaseDataset(Dataset):
 
     def get_estimates(self, dataset_name):
         #  Obtain  estimates
-        dataset_name = self.datasets[dataset_name] if type(dataset_name) == int else \
-            dataset_name
+        dataset_name = self.datasets[dataset_name] if type(dataset_name) == int else dataset_name
         file_name = os.path.join(self.path_results, dataset_name + "_filter.p")
         if not os.path.exists(file_name):
             print('No result for ' + dataset_name)

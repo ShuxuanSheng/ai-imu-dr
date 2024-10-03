@@ -7,6 +7,9 @@ from termcolor import cprint
 from utils_numpy_filter import NUMPYIEKF
 from utils import prepare_data
 
+"""
+    初始化Q net，Q虽然实时解算的时候是固定的，但是具体的值是通过模型学习确定的
+"""
 class InitProcessCovNet(torch.nn.Module):
 
         def __init__(self):
@@ -45,13 +48,16 @@ class InitProcessCovNet(torch.nn.Module):
             beta = 10**(self.tanh(alpha))
             return beta
 
-
+"""
+    论文V.A部分的AI-Based Measurement Noise Parameter Adapter：根据acc和gyr，预测nhc伪观测的cov
+"""
 class MesNet(torch.nn.Module):
         def __init__(self):
             super(MesNet, self).__init__()
-            self.beta_measurement = 3*torch.ones(2).double()
+            self.beta_measurement = 3*torch.ones(2).double()  #eq：17，beta=3
             self.tanh = torch.nn.Tanh()
             # 构建序列化的卷积神经网络，包括巻积层、池化层、激活函数、Dropout 层和全连接层
+            # 对应论文V.B部分
             self.cov_net = torch.nn.Sequential(torch.nn.Conv1d(6, 32, 5),
                        torch.nn.ReplicationPad1d(4),
                        torch.nn.ReLU(),
@@ -62,18 +68,17 @@ class MesNet(torch.nn.Module):
                        torch.nn.Dropout(p=0.5),
                        ).double()
             "CNN for measurement covariance"
-            self.cov_lin = torch.nn.Sequential(torch.nn.Linear(32, 2),
-                                              torch.nn.Tanh(),
-                                              ).double()
+            # 全连接层的输入是cnn的输出，输出是z_n，维度是2
+            self.cov_lin = torch.nn.Sequential(torch.nn.Linear(32, 2), torch.nn.Tanh(),).double()
             # 偏置项和权重矩阵的元素都除以100，是一种常见的初始化策略，用于控制参数的初始范围，有助于模型的训练和收敛
             self.cov_lin[0].bias.data[:] /= 100
             self.cov_lin[0].weight.data[:] /= 100
 
         def forward(self, u, iekf):
             y_cov = self.cov_net(u).transpose(0, 2).squeeze()
-            z_cov = self.cov_lin(y_cov)
-            z_cov_net = self.beta_measurement.unsqueeze(0)*z_cov
-            measurements_covs = (iekf.cov0_measurement.unsqueeze(0) * (10**z_cov_net))
+            z_cov = self.cov_lin(y_cov)  #eq：17，z_cov = tanh（z_n)
+            z_cov_net = self.beta_measurement.unsqueeze(0)*z_cov #eq：17，self.beta_measurement.unsqueeze(0)是beta
+            measurements_covs = (iekf.cov0_measurement.unsqueeze(0) * (10**z_cov_net)) #eq：17，iekf.cov0_measurement.unsqueeze(0)是theta^2,
             return measurements_covs
 
 
@@ -91,8 +96,8 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         # mean and standard deviation of parameters for normalizing inputs
         self.u_loc = None
         self.u_std = None
-        self.initprocesscov_net = InitProcessCovNet() #初始cov网络
-        self.mes_net = MesNet()  #量测网络
+        self.initprocesscov_net = InitProcessCovNet() #实例化一个Q net
+        self.mes_net = MesNet()  #实例化一个AI-Based Measurement Noise Parameter Adapter
         self.cov0_measurement = None
 
         # modified parameters
@@ -114,8 +119,7 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
                                            self.cov_b_omega, self.cov_b_omega, self.cov_b_omega,
                                            self.cov_b_acc, self.cov_b_acc, self.cov_b_acc,
                                            self.cov_Rot_c_i, self.cov_Rot_c_i, self.cov_Rot_c_i,
-                                           self.cov_t_c_i, self.cov_t_c_i, self.cov_t_c_i])
-                            ).double()
+                                           self.cov_t_c_i, self.cov_t_c_i, self.cov_t_c_i])).double()
         self.cov0_measurement = torch.Tensor([self.cov_lat, self.cov_up]).double()
 
     def run(self, t, u,  measurements_covs, v_mes, p_mes, N, ang0):
@@ -142,6 +146,9 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
             P = self.init_covariance()
             return Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P
 
+    """
+        eq:18
+    """
     def init_covariance(self):
         beta = self.initprocesscov_net.init_cov(self)
         P = torch.zeros(self.P_dim, self.P_dim).double()
@@ -451,13 +458,12 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         :return:
         """
 
-        self.Q = torch.diag(torch.Tensor([self.cov_omega, self.cov_omega, self. cov_omega,
+        self.Q = torch.diag(torch.Tensor([self.cov_omega, self.cov_omega, self.cov_omega,
                                            self.cov_acc, self.cov_acc, self.cov_acc,
                                            self.cov_b_omega, self.cov_b_omega, self.cov_b_omega,
                                            self.cov_b_acc, self.cov_b_acc, self.cov_b_acc,
                                            self.cov_Rot_c_i, self.cov_Rot_c_i, self.cov_Rot_c_i,
-                                           self.cov_t_c_i, self.cov_t_c_i, self.cov_t_c_i])
-                            ).double()
+                                           self.cov_t_c_i, self.cov_t_c_i, self.cov_t_c_i])).double()
 
         beta = self.initprocesscov_net.init_processcov(self)
         self.Q = torch.zeros(self.Q.shape[0], self.Q.shape[0]).double()

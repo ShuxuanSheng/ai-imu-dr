@@ -23,7 +23,6 @@ def launch(args):
     if args.read_data:
         args.dataset_class.read_data(args) # 读取原始kitti数据保存成.p文件
     # dataset是实例化的KITTIDataset类型的对象，属性datasets中加载了.p文件的名字 print(dataset.datasets) -> ['2011_09_26_drive_0002_extract']
-    # 等同于执行dataset = KITTIDataset(args)
     # 这里不直接写成 dataset = KITTIDataset(args)是为了保持代码的灵活，可以通过修改dataset_class的值来切换不同的数据集
     dataset = args.dataset_class(args)
 
@@ -49,14 +48,12 @@ class KITTIParameters(IEKF.Parameters):
     cov_b_acc = 1e-6
     cov_Rot_c_i = 1e-8
     cov_t_c_i = 1e-8
-
     cov_Rot0 = 1e-6
     cov_v0 = 1e-1
     cov_b_omega0 = 1e-8
     cov_b_acc0 = 1e-3
     cov_Rot_c_i0 = 1e-5
     cov_t_c_i0 = 1e-2
-
     cov_lat = 1
     cov_up = 10
 
@@ -80,11 +77,7 @@ class KITTIParameters(IEKF.Parameters):
             setattr(self, attr, getattr(KITTIParameters, attr))
 
 
-class KITTIDataset(BaseDataset):
-    # OxtsData是Kitti数据集中的一部分，它提供了GPS/惯性导航系统的数据
-    # 定一个命名元组类型数据，
-    # 语法上，namedtuple接收两个参数：typename(这里是OxtsPacket)、一个可迭代对象例如列表
-    # 这样可以通过OxtsPacket.lat这种方式更方便的访问数据
+class BitDataset(BaseDataset):
     OxtsPacket = namedtuple('OxtsPacket',
                             'lat, lon, alt, '
                             + 'roll, pitch, yaw, '
@@ -98,22 +91,11 @@ class KITTIDataset(BaseDataset):
     # Bundle into an easy-to-access structure
     OxtsData = namedtuple('OxtsData', 'packet, T_w_imu')
     min_seq_dim = 25 * 100  # 60 s
-    # 有问题的数据，后续需要从数据集中移除
-    datasets_fake = ['2011_09_26_drive_0093_extract', '2011_09_28_drive_0039_extract',
-                     '2011_09_28_drive_0002_extract']
-    """
-    '2011_09_30_drive_0028_extract' has trouble at N = [6000, 14000] -> test data
-    '2011_10_03_drive_0027_extract' has trouble at N = 29481
-    '2011_10_03_drive_0034_extract' has trouble at N = [33500, 34000]
-    """
 
     # training set to the raw data of the KITTI dataset.
     # The following dict lists the name and end frame of each sequence that
     # has been used to extract the visual odometry / SLAM training set
     odometry_benchmark = OrderedDict()
-    odometry_benchmark["2011_09_30_drive_0020_extract"] = [0, 11347]
-
-    """
     odometry_benchmark["2011_10_03_drive_0027_extract"] = [0, 45692]
     odometry_benchmark["2011_10_03_drive_0042_extract"] = [0, 12180]
     odometry_benchmark["2011_10_03_drive_0034_extract"] = [0, 47935]
@@ -138,11 +120,10 @@ class KITTIDataset(BaseDataset):
     odometry_benchmark_img["2011_09_30_drive_0028_extract"] = [11000, 51700]
     odometry_benchmark_img["2011_09_30_drive_0033_extract"] = [0, 15900]
     odometry_benchmark_img["2011_09_30_drive_0034_extract"] = [0, 12000]
-    """
 
     def __init__(self, args):
         #super方法保证在执行构造函数之前先执行父类BaseDataset的构造函数
-        super(KITTIDataset, self).__init__(args)
+        super(BitDataset, self).__init__(args)
 
         self.datasets_validatation_filter['2011_09_30_drive_0028_extract'] = [11231, 53650]
         # self.datasets_train_filter["2011_10_03_drive_0042_extract"] = [0, None]
@@ -153,12 +134,6 @@ class KITTIDataset(BaseDataset):
         self.datasets_train_filter["2011_10_03_drive_0027_extract"] = [0, 18000]
         self.datasets_train_filter["2011_10_03_drive_0034_extract"] = [0, 31000]
         # self.datasets_train_filter["2011_09_30_drive_0034_extract"] = [0, None]
-
-        for dataset_fake in KITTIDataset.datasets_fake:
-            if dataset_fake in self.datasets:
-                self.datasets.remove(dataset_fake)
-            if dataset_fake in self.datasets_train:
-                self.datasets_train.remove(dataset_fake)
 
     """
         读取KITTI数据集中的oxts数据(gnss/imu组合定位数据)，进行数据类型转换，最后经过pickle序列化后保存成.p文件
@@ -189,9 +164,9 @@ class KITTIDataset(BaseDataset):
                 if not os.path.isdir(path2):
                     continue
                 # read data
-                # 获取指定目录 path2/oxts/data 下所有的 .txt 文件，并将它们按照文件名排序存储在 oxts_files 列表中
-                oxts_files = sorted(glob.glob(os.path.join(path2, 'oxts', 'data', '*.txt')))
-                oxts = KITTIDataset.load_oxts_packets_and_poses(oxts_files)
+                oxts_files = sorted(glob.glob(os.path.join(path2, 'merged.txt')))
+
+                oxts = BitDataset.load_oxts_packets_and_poses(oxts_files)
 
                 """ Note on difference between ground truth and oxts solution:
                     - orientation is the same
@@ -213,9 +188,9 @@ class KITTIDataset(BaseDataset):
                 roll_gt = np.zeros(len(oxts))
                 pitch_gt = np.zeros(len(oxts))
                 yaw_gt = np.zeros(len(oxts))
-                t = KITTIDataset.load_timestamps(path2)
+                t = BitDataset.load_timestamps(path2)
                 acc = np.zeros((len(oxts), 3))
-                acc_bis = np.zeros((len(oxts), 3))
+                acc_bis = np.zeros((len(oxts), 3)) #副本，另一个坐标系下的acc
                 gyro = np.zeros((len(oxts), 3))
                 gyro_bis = np.zeros((len(oxts), 3))
                 p_gt = np.zeros((len(oxts), 3))
@@ -251,7 +226,7 @@ class KITTIDataset(BaseDataset):
                     v_rob_gt[k, 0] = oxts_k[0].vf
                     v_rob_gt[k, 1] = oxts_k[0].vl
                     v_rob_gt[k, 2] = oxts_k[0].vu
-                    p_gt[k] = oxts_k[1][:3, 3]  #oxts_k数据类型是OxtsData(namedtuple)，其中第二个字段是根据lla和rpy转换成的R和T
+                    p_gt[k] = oxts_k[1][:3, 3]
                     Rot_gt_k = oxts_k[1][:3, :3]
                     roll_gt[k], pitch_gt[k], yaw_gt[k] = IEKF.to_rpy(Rot_gt_k)
 
@@ -291,7 +266,7 @@ class KITTIDataset(BaseDataset):
                     }
 
                 t_tot += t[-1] - t[0]
-                KITTIDataset.dump(mondict, args.path_data_save, date_dir2)
+                BitDataset.dump(mondict, args.path_data_save, date_dir2)
         print("\n Total dataset duration : {:.2f} s".format(t_tot))
 
     @staticmethod
@@ -367,9 +342,9 @@ class KITTIDataset(BaseDataset):
         t = np.array([tx, ty, tz])
 
         # Use the Euler angles to get the rotation matrix
-        Rx = KITTIDataset.rotx(packet.roll)
-        Ry = KITTIDataset.roty(packet.pitch)
-        Rz = KITTIDataset.rotz(packet.yaw)
+        Rx = BitDataset.rotx(packet.roll)
+        Ry = BitDataset.roty(packet.pitch)
+        Rz = BitDataset.rotz(packet.yaw)
         R = Rz.dot(Ry.dot(Rx))
 
         # Combine the translation and rotation into a homogeneous transform
@@ -405,19 +380,19 @@ class KITTIDataset(BaseDataset):
                     line[:-5] = [float(x) for x in line[:-5]] #选择除了最后五个元素外的所有元素，并将它们转换为浮点数类型。
                     line[-5:] = [int(float(x)) for x in line[-5:]] #选择最后五个元素外的所有元素，并将它们转换为整数类型。
 
-                    packet = KITTIDataset.OxtsPacket(*line) #OxtsPacket是namedtuple类型，这里是将每一行转换成OxtsPacket这种数据格式
+                    packet = BitDataset.OxtsPacket(*line) #OxtsPacket是namedtuple类型，这里是将每一行转换成OxtsPacket这种数据格式
 
                     if scale is None:
                         scale = np.cos(packet.lat * np.pi / 180.)
 
-                    R, t = KITTIDataset.pose_from_oxts_packet(packet, scale) #从lla展开成站心坐标
+                    R, t = BitDataset.pose_from_oxts_packet(packet, scale)
 
-                    if origin is None:  #默认从第一帧gps为展开原点
+                    if origin is None:
                         origin = t
 
-                    T_w_imu = KITTIDataset.transform_from_rot_trans(R, t - origin)
+                    T_w_imu = BitDataset.transform_from_rot_trans(R, t - origin)
 
-                    oxts.append(KITTIDataset.OxtsData(packet, T_w_imu))
+                    oxts.append(BitDataset.OxtsData(packet, T_w_imu))
         return oxts
 
     @staticmethod
@@ -452,8 +427,8 @@ class KITTIDataset(BaseDataset):
         return timestamps
 
 def test_filter(args, dataset):
-    iekf = IEKF()  #初始化一个iekf实例，并设置Q矩阵的初始值
-    torch_iekf = TORCHIEKF()  #初始化一个TORCHIEKF实例，并设置Q矩阵的初始值
+    iekf = IEKF()
+    torch_iekf = TORCHIEKF()
 
     # put Kitti parameters
     iekf.filter_parameters = KITTIParameters()
@@ -462,11 +437,12 @@ def test_filter(args, dataset):
     torch_iekf.set_param_attr()
 
     torch_iekf.load(args, dataset)
-    iekf.set_learned_covariance(torch_iekf)  #论文中提到滤波器在线估计的时候Q是固定的，但是Q的值是神经网络学好的，存在iekfnets.p中，加载进来
+    iekf.set_learned_covariance(torch_iekf)  #论文中提到滤波器在线估计的时候Q是固定的，但是Q的值是神经网络学出来的
+
     for i in range(0, len(dataset.datasets)):
         dataset_name = dataset.dataset_name(i)
         if dataset_name not in dataset.odometry_benchmark.keys():
-            continue  #odometry_benchmark中的seq是有slam的，用于对比，所以非odometry_benchmark中的seq直接跳过
+            continue
         print("Test filter on sequence: " + dataset_name)
         t, ang_gt, p_gt, v_gt, u = prepare_data(args, dataset, dataset_name, i, to_numpy=True)
         N = None
@@ -479,23 +455,24 @@ def test_filter(args, dataset):
                                                                    v_gt, p_gt, N,
                                                                    ang_gt[0])
         diff_time = time.time() - start_time
-        print("Test execution time: {:.2f} s (sequence time: {:.2f} s)".format(diff_time, t[-1] - t[0]))
+        print("Execution time: {:.2f} s (sequence time: {:.2f} s)".format(diff_time,
+                                                                          t[-1] - t[0]))
         mondict = {
             't': t, 'Rot': Rot, 'v': v, 'p': p, 'b_omega': b_omega, 'b_acc': b_acc,
             'Rot_c_i': Rot_c_i, 't_c_i': t_c_i,
             'measurements_covs': measurements_covs,
             }
-        dataset.dump(mondict, args.path_results, dataset_name + "_filter.p")  #保存ai-based imu dr的结果
+        dataset.dump(mondict, args.path_results, dataset_name + "_filter.p")
 
 
 class KITTIArgs():
         # path_data_base = "/media/mines/46230797-4d43-4860-9b76-ce35e699ea47/KITTI/raw"
-        path_data_base = "/home/ssx/shengshuxuan/datasets/kitti/2011_09_26_drive_0002_extract/" #存放原始kitti数据集的路径
-        path_data_save = "../data"   #存放.p格式的kitti数据的路径
-        path_results = "../results"  #存放ai-based dr 的结果的路径
-        path_temp = "../temp" #存放临时文件，如iekfnet参数
+        path_data_base = "/home/ssx/shengshuxuan/datasets/kitti/2011_09_26_drive_0002_extract/"
+        path_data_save = "../data"
+        path_results = "../results"
+        path_temp = "../temp"
 
-        epochs = 400  #https://blog.csdn.net/weixin_45662399/article/details/136836955#:~:text=%E5%8F%82%E8%80%83%E5%8D%9A%E6%96%87%E5%92%8C%E5%9B%BE%E7%89%87%E6%9D%A5
+        epochs = 400
         seq_dim = 6000
 
         # training, cross-validation and test dataset
@@ -509,12 +486,12 @@ class KITTIArgs():
         train_filter = 0
         test_filter = 1
         results_filter = 1
-        dataset_class = KITTIDataset
+        dataset_class = BitDataset
         parameter_class = KITTIParameters
 
 
 if __name__ == '__main__':
     args = KITTIArgs()
-    dataset = KITTIDataset(args)
+    dataset = BitDataset(args)
     launch(KITTIArgs)
 

@@ -19,8 +19,7 @@ def results_filter(args, dataset):
 
         print("\nResults for: " + dataset_name)
 
-        Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, measurements_covs = dataset.get_estimates(
-            dataset_name)
+        Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, measurements_covs = dataset.get_estimates(dataset_name)
 
         # get data
         t, ang_gt, p_gt, v_gt, u = dataset.get_data(dataset_name)
@@ -116,6 +115,7 @@ def results_filter(args, dataset):
         ax3.plot(p_gt[:, 0], p_gt[:, 1])
         ax3.plot(p[:, 0], p[:, 1])
         ax3.axis('equal')
+
         ax4.plot(p_gt[:, 0], p_gt[:, 1])
         ax4.plot(p_align[:, 0], p_align[:, 1])
         ax4.axis('equal')

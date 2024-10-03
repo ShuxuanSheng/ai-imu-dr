@@ -64,6 +64,7 @@ def train_filter(args, dataset):
     start_time = time.time()
 
     for epoch in range(1, args.epochs + 1):
+        #执行一次epoch训练
         train_loop(args, dataset, epoch, iekf, optimizer, args.seq_dim)
         save_iekf(args, iekf)
         print("Amount of time spent for 1 epoch: {}s\n".format(int(time.time() - start_time)))
@@ -156,7 +157,7 @@ def train_loop(args, dataset, epoch, iekf, optimizer, seq_dim):
     for i, (dataset_name, Ns) in enumerate(dataset.datasets_train_filter.items()):
         t, ang_gt, p_gt, v_gt, u, N0 = prepare_data_filter(dataset, dataset_name, Ns,
                                                                   iekf, seq_dim)
-
+        # 一次batch操作，计算loss
         loss = mini_batch_step(dataset, dataset_name, iekf,
                                dataset.list_rpe[dataset_name], t, ang_gt, p_gt, v_gt, u, N0)
 
@@ -172,8 +173,10 @@ def train_loop(args, dataset, epoch, iekf, optimizer, seq_dim):
 
     if loss_train == 0: 
         return 
+
     loss_train.backward()  # loss_train.cuda().backward()   执行反向传播过程，计算损失函数关于模型参数的梯度
     g_norm = torch.nn.utils.clip_grad_norm_(iekf.parameters(), max_grad_norm) #对模型 iekf 的梯度进行裁剪，限制梯度的最大范数，以防止梯度爆炸的问题
+
     if np.isnan(g_norm) or g_norm > 3*max_grad_norm:
         cprint("gradient norm: {:.5f}".format(g_norm), 'yellow')
         optimizer.zero_grad()
@@ -190,6 +193,7 @@ def save_iekf(args, iekf):
     file_name = os.path.join(args.path_temp, "iekfnets.p")
     # 大多数内置的神经网络模型（如 torch.nn.Module 的子类）以及用户自定义的模型都会默认实现 state_dict() 方法
     # 这个方法会返回模型中所有可学习参数的状态字典
+    # 会保存这个类的成员参数吗？->不会，只会保存state_dict
     torch.save(iekf.state_dict(), file_name)
     print("The IEKF nets are saved in the file " + file_name)
 
@@ -197,10 +201,11 @@ def save_iekf(args, iekf):
 def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt, u, N0):
     iekf.set_Q()
     measurements_covs = iekf.forward_nets(u) #将imu测量输入到神经网络torchiekf中，预测measurements_covs
+    #根据acc和gyr以及nhc伪观测和网络预测的噪声R进行更新系统状态
     Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u,measurements_covs,
                                                             v_gt, p_gt, t.shape[0],
                                                             ang_gt[0]) #根据预测的预测measurements_covs执行滤波
-    delta_p, delta_p_gt = precompute_lost(Rot, p, list_rpe, N0)
+    delta_p, delta_p_gt = precompute_lost(Rot, p, list_rpe, N0)  #返回窗口头尾delta_p和delta_p_gt
     if delta_p is None:
         return -1
     loss = criterion(delta_p, delta_p_gt)

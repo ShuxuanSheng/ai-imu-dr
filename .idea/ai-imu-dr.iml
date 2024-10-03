@@ -7,7 +7,7 @@
   </component>
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$" />
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="ai-imu (2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="ai-imu (2) interpreter library" level="application" />
   </component>

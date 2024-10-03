@@ -22,18 +22,23 @@ class NUMPYIEKF:
         self.cov_b_acc = None
         self.cov_Rot_c_i = None
         self.cov_t_c_i = None
+
         self.cov_lat = None
         self.cov_up = None
+
         self.cov_b_omega0 = None
         self.cov_b_acc0 = None
         self.cov_Rot0 = None
         self.cov_v0 = None
         self.cov_Rot_c_i0 = None
         self.cov_t_c_i0 = None
+
         self.Q = None
         self.Q_dim = None
+
         self.n_normalize_rot = None
         self.n_normalize_rot_c_i = None
+
         self.P_dim = None
         self.verbose = None
 
@@ -43,7 +48,7 @@ class NUMPYIEKF:
         else:
             filter_parameters = parameter_class()
         self.filter_parameters = filter_parameters
-        self.set_param_attr()
+        self.set_param_attr() #设置Q的值
 
     class Parameters:
         g = np.array([0, 0, -9.80665])
@@ -55,7 +60,8 @@ class NUMPYIEKF:
         Q_dim = 18
         """process noise covariance dimension"""
 
-        # Process noise covariance
+        # 与论文中给出的参数不一致
+        # Process noise covariance Q
         cov_omega = 1e-3
         """gyro covariance"""
         cov_acc = 1e-2
@@ -74,6 +80,7 @@ class NUMPYIEKF:
         cov_up = 300
         """Zero lateral velocity covariance"""
 
+        # P0
         cov_Rot0 = 1e-3
         """initial pitch and roll covariance"""
         cov_b_omega0 = 6e-3
@@ -103,6 +110,9 @@ class NUMPYIEKF:
             for key, value in kwargs.items():
                 setattr(self, key, value)
 
+    """
+        设置Q的值
+    """
     def set_param_attr(self):
 
         # get a list of attribute only
@@ -127,11 +137,10 @@ class NUMPYIEKF:
                                        ang0, N)
 
         for i in range(1, N):
-            # 执行propagate
+            # 执行propagate，第三个p是位置，最后的一个参数P是协方差矩阵
             Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
-                self.propagate(Rot[i-1], v[i-1], p[i-1], b_omega[i-1], b_acc[i-1], Rot_c_i[i-1],
-                               t_c_i[i-1], P, u[i], dt[i-1])
-            # 执行propagate
+                self.propagate(Rot[i-1], v[i-1], p[i-1], b_omega[i-1], b_acc[i-1], Rot_c_i[i-1], t_c_i[i-1], P, u[i], dt[i-1])
+            # 执行update
             Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
                 self.update(Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P, u[i],
                             i, measurements_covs[i])
@@ -427,8 +436,7 @@ class NUMPYIEKF:
         torch_iekf.set_Q()
         self.Q = torch_iekf.Q.cpu().detach().numpy()
 
-        beta = torch_iekf.initprocesscov_net.init_cov(torch_iekf)\
-            .detach().cpu().numpy()
+        beta = torch_iekf.initprocesscov_net.init_cov(torch_iekf).detach().cpu().numpy() #beta是6维
 
         self.cov_Rot0 *= beta[0]
         self.cov_v0 *= beta[1]
