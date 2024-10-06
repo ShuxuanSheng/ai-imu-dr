@@ -225,8 +225,7 @@ class KITTIDataset(BaseDataset):
                 k_max = len(oxts)
                 for k in range(k_max):
                     oxts_k = oxts[k]
-                    t[k] = 3600 * t[k].hour + 60 * t[k].minute + t[k].second + t[
-                        k].microsecond / 1e6
+                    t[k] = 3600 * t[k].hour + 60 * t[k].minute + t[k].second + t[k].microsecond / 1e6
                     lat_oxts[k] = oxts_k[0].lat #oxts_k数据类型是OxtsData(namedtuple)，其中第一个字段是oxts_packets
                     lon_oxts[k] = oxts_k[0].lon
                     alt_oxts[k] = oxts_k[0].alt
@@ -401,7 +400,7 @@ class KITTIDataset(BaseDataset):
                 for line in f.readlines():
                     line = line.split()
                     # Last five entries are flags and counts
-                    # 后列数据分别是navstat、numsats、posmode、velmode、orimode
+                    # 后5列数据分别是navstat、numsats、posmode、velmode、orimode
                     line[:-5] = [float(x) for x in line[:-5]] #选择除了最后五个元素外的所有元素，并将它们转换为浮点数类型。
                     line[-5:] = [int(float(x)) for x in line[-5:]] #选择最后五个元素外的所有元素，并将它们转换为整数类型。
 
@@ -417,7 +416,7 @@ class KITTIDataset(BaseDataset):
 
                     T_w_imu = KITTIDataset.transform_from_rot_trans(R, t - origin)
 
-                    oxts.append(KITTIDataset.OxtsData(packet, T_w_imu))
+                    oxts.append(KITTIDataset.OxtsData(packet, T_w_imu))  #packet存放的是原始kitti格式的数据，T_w_imu是转换成局部站心坐标后从world到imu的transform矩阵
         return oxts
 
     @staticmethod
@@ -485,6 +484,12 @@ def test_filter(args, dataset):
             'Rot_c_i': Rot_c_i, 't_c_i': t_c_i,
             'measurements_covs': measurements_covs,
             }
+        # t_reshaped = t.flatten()
+        # combined = np.column_stack((t_reshaped, p))
+        # combined_cov = np.column_stack((t_reshaped, measurements_covs))
+        # # 保存为 csv 文件
+        # np.savetxt('output_fixed.csv', combined, delimiter=',')
+        # np.savetxt('output_cov.csv', combined_cov, delimiter=',')
         dataset.dump(mondict, args.path_results, dataset_name + "_filter.p")  #保存ai-based imu dr的结果
 
 

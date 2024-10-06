@@ -192,7 +192,7 @@ class BaseDataset(Dataset):
         dataset_name = self.datasets[dataset_name] if type(dataset_name) == int else dataset_name
         file_name = os.path.join(self.path_results, dataset_name + "_filter.p")
         if not os.path.exists(file_name):
-            print('No result for ' + dataset_name)
+            print('No result for ' + file_name)
             return
         mondict = self.load(file_name)
         Rot = mondict['Rot']

@@ -133,8 +133,7 @@ class NUMPYIEKF:
         if N is None:
             N = u.shape[0]
         # 第一帧初始化
-        Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P = self.init_run(dt, u, p_mes, v_mes,
-                                       ang0, N)
+        Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P = self.init_run(dt, u, p_mes, v_mes, ang0, N)
 
         for i in range(1, N):
             # 执行propagate，第三个p是位置，最后的一个参数P是协方差矩阵
@@ -143,7 +142,7 @@ class NUMPYIEKF:
             # 执行update
             Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
                 self.update(Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P, u[i],
-                            i, measurements_covs[i])
+                            i, measurements_covs[0])
             # correct numerical error every second
             # 对旋转矩阵进行规范化处理，保证数值稳定性
             if i % self.n_normalize_rot == 0:
@@ -251,7 +250,7 @@ class NUMPYIEKF:
         H[:, 15:18] = H_v_imu[1:]
         H[:, 9:12] = H_t_c_i[1:]
         H[:, 18:21] = -Omega[1:]
-        r = - v_body[1:]
+        r = - v_body[1:] # 新息
         R = np.diag(measurement_cov)  #measurement_cov是神经网络学出来的
         Rot_up, v_up, p_up, b_omega_up, b_acc_up, Rot_c_i_up, t_c_i_up, P_up = \
             self.state_and_cov_update(Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, H, r, R)
@@ -259,9 +258,9 @@ class NUMPYIEKF:
 
     @staticmethod
     def state_and_cov_update(Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, H, r, R):
-        S = H.dot(P).dot(H.T) + R
-        K = (np.linalg.solve(S, P.dot(H.T).T)).T
-        dx = K.dot(r)
+        S = H.dot(P).dot(H.T) + R  #eq：29
+        K = (np.linalg.solve(S, P.dot(H.T).T)).T #eq：30
+        dx = K.dot(r) #eq：31
 
         dR, dxi = NUMPYIEKF.sen3exp(dx[:9])
         dv = dxi[:, 0]

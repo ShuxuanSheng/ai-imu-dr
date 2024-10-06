@@ -115,6 +115,8 @@ def results_filter(args, dataset):
         ax3.plot(p_gt[:, 0], p_gt[:, 1])
         ax3.plot(p[:, 0], p[:, 1])
         ax3.axis('equal')
+        ax3.text(p[0, 0], p[0, 1], 'Start', fontsize=12, ha='right')  # 起点
+        ax3.text(p[-1, 0], p[-1, 1], 'End', fontsize=12, ha='right')  # 终点
 
         ax4.plot(p_gt[:, 0], p_gt[:, 1])
         ax4.plot(p_align[:, 0], p_align[:, 1])

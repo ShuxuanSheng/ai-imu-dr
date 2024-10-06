@@ -9,19 +9,13 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="423d8db3-8c37-4ad0-9913-4822d3d9166f" name="Default Changelist" comment="1# 增加注释：模型训练、测试结果">
-      <change afterPath="$PROJECT_DIR$/src/main_bit.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/novatel2oxts.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/ai-imu-dr.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/ai-imu-dr.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="423d8db3-8c37-4ad0-9913-4822d3d9166f" name="Default Changelist" comment="1# 增加注释">
+      <change afterPath="$PROJECT_DIR$/src/compare.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AI-IMU_Dead-Reckoning.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/AI-IMU_Dead-Reckoning.pdf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main_kitti.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main_kitti.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/train_torch_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/train_torch_filter.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils_numpy_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils_numpy_filter.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils_plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils_plot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils_torch_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils_torch_filter.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -272,7 +266,9 @@
       <workItem from="1721891762131" duration="15693000" />
       <workItem from="1727573326279" duration="4696000" />
       <workItem from="1727600716188" duration="25815000" />
-      <workItem from="1727955931659" duration="5936000" />
+      <workItem from="1727955931659" duration="8878000" />
+      <workItem from="1728115783023" duration="5877000" />
+      <workItem from="1728178693295" duration="2465000" />
     </task>
     <task id="LOCAL-00001" summary="1# 增加注释：从kitti原始集读取gnss/imu数据，进行格式转换并序列化后保存成.p文件">
       <option name="closed" value="true" />
@@ -290,7 +286,15 @@
       <option name="project" value="LOCAL" />
       <updated>1721219281169</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="1# 增加注释">
+      <option name="closed" value="true" />
+      <created>1727962531996</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1727962531996</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
@@ -328,7 +332,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="1# 增加注释：从kitti原始集读取gnss/imu数据，进行格式转换并序列化后保存成.p文件" />
     <MESSAGE value="1# 增加注释：模型训练、测试结果" />
-    <option name="LAST_COMMIT_MESSAGE" value="1# 增加注释：模型训练、测试结果" />
+    <MESSAGE value="1# 增加注释" />
+    <option name="LAST_COMMIT_MESSAGE" value="1# 增加注释" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/ai_imu_dr$main_kitti.coverage" NAME="main_kitti Coverage Results" MODIFIED="1555342494523" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
