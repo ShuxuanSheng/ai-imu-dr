@@ -9,13 +9,11 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="423d8db3-8c37-4ad0-9913-4822d3d9166f" name="Default Changelist" comment="1# 增加注释">
-      <change afterPath="$PROJECT_DIR$/src/compare.py" afterDir="false" />
+    <list default="true" id="423d8db3-8c37-4ad0-9913-4822d3d9166f" name="Default Changelist" comment="1# 增加注释跑通版本">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/compare.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/compare.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main_kitti.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main_kitti.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils_numpy_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils_numpy_filter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils_plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils_plot.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -268,7 +266,8 @@
       <workItem from="1727600716188" duration="25815000" />
       <workItem from="1727955931659" duration="8878000" />
       <workItem from="1728115783023" duration="5877000" />
-      <workItem from="1728178693295" duration="2465000" />
+      <workItem from="1728178693295" duration="7782000" />
+      <workItem from="1728292033036" duration="4261000" />
     </task>
     <task id="LOCAL-00001" summary="1# 增加注释：从kitti原始集读取gnss/imu数据，进行格式转换并序列化后保存成.p文件">
       <option name="closed" value="true" />
@@ -294,7 +293,15 @@
       <option name="project" value="LOCAL" />
       <updated>1727962531996</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="1# 增加注释跑通版本">
+      <option name="closed" value="true" />
+      <created>1728181856585</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1728181856585</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
@@ -333,7 +340,8 @@
     <MESSAGE value="1# 增加注释：从kitti原始集读取gnss/imu数据，进行格式转换并序列化后保存成.p文件" />
     <MESSAGE value="1# 增加注释：模型训练、测试结果" />
     <MESSAGE value="1# 增加注释" />
-    <option name="LAST_COMMIT_MESSAGE" value="1# 增加注释" />
+    <MESSAGE value="1# 增加注释跑通版本" />
+    <option name="LAST_COMMIT_MESSAGE" value="1# 增加注释跑通版本" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/ai_imu_dr$main_kitti.coverage" NAME="main_kitti Coverage Results" MODIFIED="1555342494523" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />

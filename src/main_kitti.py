@@ -486,9 +486,10 @@ def test_filter(args, dataset):
             }
         # t_reshaped = t.flatten()
         # combined = np.column_stack((t_reshaped, p))
-        # combined_cov = np.column_stack((t_reshaped, measurements_covs))
+        # # # combined_cov = np.column_stack((t_reshaped, measurements_covs))
         # # 保存为 csv 文件
-        # np.savetxt('output_fixed.csv', combined, delimiter=',')
+        # np.savetxt('output_wheel_fixed.csv', combined, delimiter=',')
+        # np.savetxt('p_gt.csv', p_gt, delimiter=',')
         # np.savetxt('output_cov.csv', combined_cov, delimiter=',')
         dataset.dump(mondict, args.path_results, dataset_name + "_filter.p")  #保存ai-based imu dr的结果
 

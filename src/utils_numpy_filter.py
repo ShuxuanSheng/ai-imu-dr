@@ -140,9 +140,16 @@ class NUMPYIEKF:
             Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
                 self.propagate(Rot[i-1], v[i-1], p[i-1], b_omega[i-1], b_acc[i-1], Rot_c_i[i-1], t_c_i[i-1], P, u[i], dt[i-1])
             # 执行update
+            wheel_encoder = np.linalg.norm(v_mes[i])  #v_mes是enu速度
+            wheel = np.array([wheel_encoder, 0, 0])
+            wheel_covs = np.array([measurements_covs[0, 0], measurements_covs[0, 0], measurements_covs[0, 1]])
+
+            # Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
+            #     self.update(Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P, u[i],
+            #                 i, wheel, wheel_covs)
             Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
                 self.update(Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P, u[i],
-                            i, measurements_covs[0])
+                            i, wheel, wheel_covs)
             # correct numerical error every second
             # 对旋转矩阵进行规范化处理，保证数值稳定性
             if i % self.n_normalize_rot == 0:
@@ -230,7 +237,7 @@ class NUMPYIEKF:
     """
         使用横向、高程的虚拟零速观测进行update
     """
-    def update(self, Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, u, i, measurement_cov):
+    def update(self, Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, u, i, wheel, wheel_covs):
         # orientation of body frame
         Rot_body = Rot.dot(Rot_c_i)
         # velocity in imu frame
@@ -245,13 +252,25 @@ class NUMPYIEKF:
         H_v_imu = Rot_c_i.T.dot(self.skew(v_imu))
         H_t_c_i = -self.skew(t_c_i)
 
+        """
+        #只考虑nhc
         H = np.zeros((2, self.P_dim))
         H[:, 3:6] = Rot_body.T[1:]
         H[:, 15:18] = H_v_imu[1:]
         H[:, 9:12] = H_t_c_i[1:]
         H[:, 18:21] = -Omega[1:]
         r = - v_body[1:] # 新息
-        R = np.diag(measurement_cov)  #measurement_cov是神经网络学出来的
+        """
+
+        #考虑wheel + nhc
+        H = np.zeros((3, self.P_dim))
+        H[:, 3:6] = Rot_body.T[0:]
+        H[:, 15:18] = H_v_imu[0:]
+        H[:, 9:12] = H_t_c_i[0:]
+        H[:, 18:21] = -Omega[0:]
+        r = wheel - v_body[0:] # 新息
+
+        R = np.diag(wheel_covs)
         Rot_up, v_up, p_up, b_omega_up, b_acc_up, Rot_c_i_up, t_c_i_up, P_up = \
             self.state_and_cov_update(Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, H, r, R)
         return Rot_up, v_up, p_up, b_omega_up, b_acc_up, Rot_c_i_up, t_c_i_up, P_up
