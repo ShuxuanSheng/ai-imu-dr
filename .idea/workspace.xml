@@ -9,11 +9,15 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="423d8db3-8c37-4ad0-9913-4822d3d9166f" name="Default Changelist" comment="1# 增加注释跑通版本">
+    <list default="true" id="423d8db3-8c37-4ad0-9913-4822d3d9166f" name="Default Changelist" comment="1# 增加wheel观测">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/compare.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/compare.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main_bit.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main_kitti.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main_kitti.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/output_cov.csv" beforeDir="false" afterPath="$PROJECT_DIR$/src/output_cov.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/train_torch_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/train_torch_filter.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils_numpy_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils_numpy_filter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils_torch_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils_torch_filter.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -267,7 +271,7 @@
       <workItem from="1727955931659" duration="8878000" />
       <workItem from="1728115783023" duration="5877000" />
       <workItem from="1728178693295" duration="7782000" />
-      <workItem from="1728292033036" duration="4261000" />
+      <workItem from="1728292033036" duration="17393000" />
     </task>
     <task id="LOCAL-00001" summary="1# 增加注释：从kitti原始集读取gnss/imu数据，进行格式转换并序列化后保存成.p文件">
       <option name="closed" value="true" />
@@ -301,7 +305,15 @@
       <option name="project" value="LOCAL" />
       <updated>1728181856585</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="1# 增加wheel观测">
+      <option name="closed" value="true" />
+      <created>1728299796829</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1728299796829</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
@@ -341,7 +353,8 @@
     <MESSAGE value="1# 增加注释：模型训练、测试结果" />
     <MESSAGE value="1# 增加注释" />
     <MESSAGE value="1# 增加注释跑通版本" />
-    <option name="LAST_COMMIT_MESSAGE" value="1# 增加注释跑通版本" />
+    <MESSAGE value="1# 增加wheel观测" />
+    <option name="LAST_COMMIT_MESSAGE" value="1# 增加wheel观测" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/ai_imu_dr$main_kitti.coverage" NAME="main_kitti Coverage Results" MODIFIED="1555342494523" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />

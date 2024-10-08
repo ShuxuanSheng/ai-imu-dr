@@ -471,7 +471,10 @@ def test_filter(args, dataset):
         N = None
         u_t = torch.from_numpy(u).double()
         # acc和gyr输入到torch_iekf网络中，预测
-        measurements_covs = torch_iekf.forward_nets(u_t)
+        v_gt_t = torch.from_numpy(v_gt).double()
+        wheel_encoder = torch.norm(v_gt_t, dim=1)  # v_gt是enu速度
+        wheel_t = wheel_encoder.unsqueeze(1)
+        measurements_covs = torch_iekf.forward_nets(u_t,wheel_t)
         measurements_covs = measurements_covs.detach().numpy()
         start_time = time.time()
         Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u, measurements_covs,
@@ -484,13 +487,12 @@ def test_filter(args, dataset):
             'Rot_c_i': Rot_c_i, 't_c_i': t_c_i,
             'measurements_covs': measurements_covs,
             }
-        # t_reshaped = t.flatten()
-        # combined = np.column_stack((t_reshaped, p))
-        # # # combined_cov = np.column_stack((t_reshaped, measurements_covs))
-        # # 保存为 csv 文件
-        # np.savetxt('output_wheel_fixed.csv', combined, delimiter=',')
-        # np.savetxt('p_gt.csv', p_gt, delimiter=',')
-        # np.savetxt('output_cov.csv', combined_cov, delimiter=',')
+        t_reshaped = t.flatten()
+        combined = np.column_stack((t_reshaped, p))
+        combined_cov = np.column_stack((t_reshaped, measurements_covs))
+        # 保存为 csv 文件
+        np.savetxt('output_wheel_filter.csv', combined, delimiter=',')
+        np.savetxt('output_cov.csv', combined_cov, delimiter=',')
         dataset.dump(mondict, args.path_results, dataset_name + "_filter.p")  #保存ai-based imu dr的结果
 
 
@@ -508,7 +510,7 @@ class KITTIArgs():
         # 指定训练集、交叉验证集、测试集
         cross_validation_sequences = ['2011_09_30_drive_0028_extract']
         test_sequences = ['2011_09_30_drive_0028_extract']
-        continue_training = True
+        continue_training = False
 
         # choose what to do
         read_data = 0

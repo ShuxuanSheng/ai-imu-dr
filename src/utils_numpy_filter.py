@@ -142,14 +142,10 @@ class NUMPYIEKF:
             # 执行update
             wheel_encoder = np.linalg.norm(v_mes[i])  #v_mes是enu速度
             wheel = np.array([wheel_encoder, 0, 0])
-            wheel_covs = np.array([measurements_covs[0, 0], measurements_covs[0, 0], measurements_covs[0, 1]])
-
-            # Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
-            #     self.update(Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P, u[i],
-            #                 i, wheel, wheel_covs)
+            # wheel_covs = np.array([measurements_covs[0, 0], measurements_covs[0, 0], measurements_covs[0, 1]])
             Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
                 self.update(Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P, u[i],
-                            i, wheel, wheel_covs)
+                            i, wheel, measurements_covs[i])
             # correct numerical error every second
             # 对旋转矩阵进行规范化处理，保证数值稳定性
             if i % self.n_normalize_rot == 0:

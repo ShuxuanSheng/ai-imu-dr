@@ -81,6 +81,39 @@ class MesNet(torch.nn.Module):
             measurements_covs = (iekf.cov0_measurement.unsqueeze(0) * (10**z_cov_net)) #eq：17，iekf.cov0_measurement.unsqueeze(0)是theta^2,
             return measurements_covs
 
+"""
+    根据acc和gyr，预测wheel+nhc的cov
+"""
+
+class wheelMesNet(torch.nn.Module):
+    def __init__(self):
+        super(wheelMesNet, self).__init__()
+        self.beta_measurement = 3 * torch.ones(3).double()  # eq：17，beta=3
+        self.tanh = torch.nn.Tanh()
+        # 构建序列化的卷积神经网络，包括巻积层、池化层、激活函数、Dropout 层和全连接层
+        self.cov_net = torch.nn.Sequential(torch.nn.Conv1d(7, 32, 5),
+                                           torch.nn.ReplicationPad1d(4),
+                                           torch.nn.ReLU(),
+                                           torch.nn.Dropout(p=0.5),
+                                           torch.nn.Conv1d(32, 32, 5, dilation=3),
+                                           torch.nn.ReplicationPad1d(4),
+                                           torch.nn.ReLU(),
+                                           torch.nn.Dropout(p=0.5),
+                                           ).double()
+        "CNN for measurement covariance"
+        # 全连接层的输入是cnn的输出，输出是z_n，维度是3
+        self.cov_lin = torch.nn.Sequential(torch.nn.Linear(32, 3), torch.nn.Tanh(), ).double()
+        # 偏置项和权重矩阵的元素都除以100，是一种常见的初始化策略，用于控制参数的初始范围，有助于模型的训练和收敛
+        self.cov_lin[0].bias.data[:] /= 100
+        self.cov_lin[0].weight.data[:] /= 100
+
+    def forward(self, u, iekf):
+        y_cov = self.cov_net(u).transpose(0, 2).squeeze()
+        z_cov = self.cov_lin(y_cov)  # eq：17，z_cov = tanh（z_n)
+        z_cov_net = self.beta_measurement.unsqueeze(0) * z_cov  # eq：17，self.beta_measurement.unsqueeze(0)是beta
+        measurements_covs = (iekf.cov0_measurement.unsqueeze(0) * (10 ** z_cov_net))  # eq：17，iekf.cov0_measurement.unsqueeze(0)是theta^2,
+        return measurements_covs
+
 
 class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
     Id1 = torch.eye(1).double()
@@ -97,7 +130,8 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         self.u_loc = None
         self.u_std = None
         self.initprocesscov_net = InitProcessCovNet() #实例化一个Q net
-        self.mes_net = MesNet()  #实例化一个AI-Based Measurement Noise Parameter Adapter
+        # self.mes_net = MesNet()  #实例化一个AI-Based Measurement Noise Parameter Adapter
+        self.mes_net = wheelMesNet()
         self.cov0_measurement = None
 
         # modified parameters
@@ -120,7 +154,7 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
                                            self.cov_b_acc, self.cov_b_acc, self.cov_b_acc,
                                            self.cov_Rot_c_i, self.cov_Rot_c_i, self.cov_Rot_c_i,
                                            self.cov_t_c_i, self.cov_t_c_i, self.cov_t_c_i])).double()
-        self.cov0_measurement = torch.Tensor([self.cov_lat, self.cov_up]).double()
+        self.cov0_measurement = torch.Tensor([self.cov_lat,self.cov_lat, self.cov_up]).double()
 
     def run(self, t, u,  measurements_covs, v_mes, p_mes, N, ang0):
 
@@ -133,9 +167,12 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
                 self.propagate(Rot[i-1], v[i-1], p[i-1], b_omega[i-1], b_acc[i-1], Rot_c_i[i-1],
                                t_c_i[i-1], P, u[i], dt[i-1])
 
+            wheel_encoder = np.linalg.norm(v_mes[i])  #v_mes是enu速度
+            wheel = np.array([wheel_encoder, 0, 0])
+            wheel = torch.from_numpy(wheel).double()
             Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
                 self.update(Rot_i, v_i, p_i, b_omega_i, b_acc_i, Rot_c_i_i, t_c_i_i, P_i,
-                            u[i], i, measurements_covs[i])
+                            u[i], i,wheel, measurements_covs[i])
         return Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i
 
     def init_run(self, dt, u, p_mes, v_mes, N, ang0):
@@ -223,7 +260,7 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         P_new = Phi.mm(P + G.mm(Q).mm(G.t())).mm(Phi.t())
         return P_new
 
-    def update(self, Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, u, i, measurement_cov):
+    def update(self, Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, u, i, wheel, measurement_cov):
         # orientation of body frame
         Rot_body = Rot.mm(Rot_c_i)
         # velocity in imu frame
@@ -236,12 +273,24 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         H_v_imu = Rot_c_i.t().mm(self.skew(v_imu))
         H_t_c_i = self.skew(t_c_i)
 
+        """
+        #只考虑nhc
         H = P.new_zeros(2, self.P_dim)
         H[:, 3:6] = Rot_body.t()[1:]
         H[:, 15:18] = H_v_imu[1:]
         H[:, 9:12] = H_t_c_i[1:]
         H[:, 18:21] = -Omega[1:]
         r = - v_body[1:]
+        R = torch.diag(measurement_cov)
+        """
+
+        #考虑wheel + nhc
+        H = P.new_zeros((3, self.P_dim))
+        H[:, 3:6] = Rot_body.t()[0:]
+        H[:, 15:18] = H_v_imu[0:]
+        H[:, 9:12] = H_t_c_i[0:]
+        H[:, 18:21] = -Omega[0:]
+        r = wheel - v_body[0:] # 新息
         R = torch.diag(measurement_cov)
 
         Rot_up, v_up, p_up, b_omega_up, b_acc_up, Rot_c_i_up, t_c_i_up, P_up = \
@@ -437,12 +486,14 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         S[2, 2] = torch.det(U) * torch.det(V)
         return U.mm(S).mm(V.t())
 
-    def forward_nets(self, u):
+    def forward_nets(self, u, wheel_encoder):
         # 对u进行归一化、转置并在第 0 维度（即最前面）添加一个维度
         u_n = self.normalize_u(u).t().unsqueeze(0)
         u_n = u_n[:, :6]
         #这里调用mes_net网络，相当于默认执行mes_net中forwad方法，相当于重载了()
-        measurements_covs = self.mes_net(u_n, self)
+        # measurements_covs = self.mes_net(u_n, self)
+        input = torch.cat((u_n, wheel_encoder.t().unsqueeze(0)), dim=1)
+        measurements_covs = self.mes_net(input, self)
         return measurements_covs
 
     def normalize_u(self, u):

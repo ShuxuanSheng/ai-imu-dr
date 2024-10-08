@@ -57,36 +57,36 @@ def compute_delta_p(Rot, p):
 
 
 def train_filter(args, dataset):
-    iekf = prepare_filter(args, dataset)
+    torch_iekf = prepare_filter(args, dataset)
     prepare_loss_data(args, dataset)
-    save_iekf(args, iekf)
-    optimizer = set_optimizer(iekf)
+    save_iekf(args, torch_iekf)
+    optimizer = set_optimizer(torch_iekf)
     start_time = time.time()
 
     for epoch in range(1, args.epochs + 1):
         #执行一次epoch训练
-        train_loop(args, dataset, epoch, iekf, optimizer, args.seq_dim)
-        save_iekf(args, iekf)
+        train_loop(args, dataset, epoch, torch_iekf, optimizer, args.seq_dim)
+        save_iekf(args, torch_iekf)
         print("Amount of time spent for 1 epoch: {}s\n".format(int(time.time() - start_time)))
         start_time = time.time()
 
 
 def prepare_filter(args, dataset):
-    iekf = TORCHIEKF()
+    torch_iekf = TORCHIEKF()
 
     # set dataset parameter
-    iekf.filter_parameters = args.parameter_class()
-    iekf.set_param_attr()
-    if type(iekf.g).__module__ == np.__name__:
-        iekf.g = torch.from_numpy(iekf.g).double()
+    torch_iekf.filter_parameters = args.parameter_class()
+    torch_iekf.set_param_attr()
+    if type(torch_iekf.g).__module__ == np.__name__:
+        torch_iekf.g = torch.from_numpy(torch_iekf.g).double()
 
     # load model
     if args.continue_training:
-        iekf.load(args, dataset)
-    iekf.train()  #设置成train模式
+        torch_iekf.load(args, dataset)
+    torch_iekf.train()  #设置成train模式
     # init u_loc and u_std
-    iekf.get_normalize_u(dataset)
-    return iekf
+    torch_iekf.get_normalize_u(dataset)
+    return torch_iekf
 
 
 """
@@ -102,7 +102,7 @@ def prepare_loss_data(args, dataset):
             return
 
     # prepare delta_p_gt
-    # 这里的rpe应该 相对位置误差
+    # 这里的rpe应该 相对位置误差relative position error
     list_rpe = {}
     # self.datasets_train_filter["2011_09_30_drive_0018_extract"] = [0, 15000]
     for dataset_name, Ns in dataset.datasets_train_filter.items():
@@ -200,7 +200,10 @@ def save_iekf(args, iekf):
 
 def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt, u, N0):
     iekf.set_Q()
-    measurements_covs = iekf.forward_nets(u) #将imu测量输入到神经网络torchiekf中，预测measurements_covs
+    # measurements_covs = iekf.forward_nets(u) #将imu测量输入到神经网络torchiekf中，预测measurements_covs
+    wheel_encoder = torch.norm(v_gt, dim=1)  # v_gt是enu速度
+    wheel_encoder = wheel_encoder.unsqueeze(1)
+    measurements_covs = iekf.forward_nets(u,wheel_encoder) #将imu和wheel输入到神经网络torchiekf中，预测measurements_covs
     #根据acc和gyr以及nhc伪观测和网络预测的噪声R进行更新系统状态
     Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u,measurements_covs,
                                                             v_gt, p_gt, t.shape[0],
