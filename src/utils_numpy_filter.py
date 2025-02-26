@@ -158,7 +158,7 @@ class NUMPYIEKF:
     def init_run(self, dt, u, p_mes, v_mes, ang0, N):
         Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = self.init_saved_state(dt, N, ang0) #初始时是0和单位阵
         Rot[0] = self.from_rpy(ang0[0], ang0[1], ang0[2]) #初始化姿态用第一帧的姿态
-        v[0] = v_mes[0] #初始化姿态用第一帧的速度
+        v[0] = v_mes[0] #初始化速度用第一帧的速度
         P = self.init_covariance()
         return Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P
 
@@ -234,8 +234,10 @@ class NUMPYIEKF:
         使用横向、高程的虚拟零速观测进行update
     """
     def update(self, Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, u, i, wheel, wheel_covs):
+        """
+        原始代码，有错误
         # orientation of body frame
-        Rot_body = Rot.dot(Rot_c_i)
+        Rot_body = Rot.dot(Rot_c_i) #Rot is from imu to world ;Rot_c_i is Rot from body frame(car,c) to imu frame(imu,i)
         # velocity in imu frame
         v_imu = Rot.T.dot(v)
         # velocity in body frame
@@ -248,8 +250,6 @@ class NUMPYIEKF:
         H_v_imu = Rot_c_i.T.dot(self.skew(v_imu))
         H_t_c_i = -self.skew(t_c_i)
 
-        """
-        #只考虑nhc
         H = np.zeros((2, self.P_dim))
         H[:, 3:6] = Rot_body.T[1:]
         H[:, 15:18] = H_v_imu[1:]
@@ -258,12 +258,33 @@ class NUMPYIEKF:
         r = - v_body[1:] # 新息
         """
 
+        Omega = self.skew(u[:3] - b_omega)  # skew of angular velocity
+        # orientation of body frame
+        Rot_body = Rot.dot(Rot_c_i)
+        # velocity in body frame in the imu axis
+        v_imu = Rot.T.dot(v)
+        v_body = Rot_c_i.T.dot(v_imu + Omega.dot(t_c_i))   # velocity in body frame in the vehicle axis
+        # Jacobian w.r.t. car frame
+        H_v_imu = self.skew(v_imu + Omega.dot(t_c_i))
+        H_t_c_i = self.skew(t_c_i)
+
+        #考虑 nhc
+        """
+        HH = np.zeros((3, self.P_dim))  # HH is a 3x21 matrix
+        HH[:, 3:6] = Rot_body.T
+        HH[:, 9:12] = Rot_c_i.T.dot(H_t_c_i)
+        HH[:, 15:18] = Rot_c_i.T.dot(H_v_imu)  # Jacobian of delta_imu_car_rotation_extrinsic
+        HH[:, 18:21] = Rot_c_i.T.dot(Omega)    # Jacobian of delta__imu_car_translation_extrinsic
+        H = HH[1:] # extract the second and third rows from HH, which correspond to lateral and vertical speed components respectively.
+        r = - v_body[1:]   # r is the residual between measurement, which is just difference between a 2x1 zero vector and v_body[1:],
+                           # v_body[1] is the lateral speed, v_body[2] is the upward speed
+        """
         #考虑wheel + nhc
         H = np.zeros((3, self.P_dim))
-        H[:, 3:6] = Rot_body.T[0:]
-        H[:, 15:18] = H_v_imu[0:]
-        H[:, 9:12] = H_t_c_i[0:]
-        H[:, 18:21] = -Omega[0:]
+        H[:, 3:6] = Rot_body.T
+        H[:, 9:12] = Rot_c_i.T.dot(H_t_c_i)
+        H[:, 15:18] = Rot_c_i.T.dot(H_v_imu)
+        H[:, 18:21] = Rot_c_i.T.dot(Omega)
         r = wheel - v_body[0:] # 新息
 
         R = np.diag(wheel_covs)
